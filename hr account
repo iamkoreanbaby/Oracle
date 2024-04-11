@@ -292,3 +292,99 @@ SELECT E.MANAGER_ID , E.EMPLOYEE_ID , D.DEPARTMENT_NAME , E.SALARY
 과정 3)부서명을 출력하기 위해 내부조인을 체결한다.
 FROM EMPLOYEES E, DEPARTMENTS D
 WHERE E.DEPARTMENT_ID = D.DEPARTMENT_ID
+
+33. 부서 명 , 위치ID ,각 부서 별 사원 총 수 , 각 부서 별 평균 연봉을 조회한다.
+
+select D.department_name AS 부서명 , D.LOCATION_ID AS 위치ID,
+COUNT(E.EMPLOYEE_ID) AS 사원총수 ,  ROUND(AVG(E.SALARY),2) AS 평균연봉
+FROM EMPLOYEES E , DEPARTMENTS D
+WHERE E.dEPARTMENT_ID = D.DEPARTMENT_ID
+GROUP BY D.DEPARTMENT_NAME, D.LOCATION_ID;
+
+33-1. 부서명, 지역명, 각 부서 별 사원 총 수, 각 부서 별 평균 연봉을 조회한다.
+
+select D.department_name AS 부서명 , L.CITY AS 지역명,
+COUNT(*) AS 사원총수 ,  ROUND(AVG(E.SALARY),2) AS 평균연봉
+FROM EMPLOYEES E , DEPARTMENTS D , LOCATIONS L
+WHERE E.dEPARTMENT_ID = D.DEPARTMENT_ID AND D.LOCATION_ID = L.LOCATION_ID
+GROUP BY D.DEPARTMENT_NAME, L.city;
+
+34. 총 사원 수 및 2005, 2006,2007,2008 년도 별 고용된 사원들의 총 수를 조회한다.
+
+SELECT DISTINCT
+ (select COUNT(EMPLOYEE_ID) FROM EMPLOYEES) AS 총사원
+,(select count(employee_id) from employees where hire_date like '05%') AS "2005년"
+,(select count(employee_id) from employees where hire_date like '06%') AS "2006년"
+,(select count(employee_id) from employees where hire_date like '07%') AS "2007년"
+,(select count(employee_id) from employees where hire_date like '08%') AS "2008년"
+from employees;
+
+35. 각 부서의 직업 별 연봉 총 합 및 각 부서별 연봉 총 합을 조회한다.
+
+SELECT DEPARTMENT_ID , JOB_ID , SUM(SALARY),AS 부서별직업별총합
+,(select sum(salary) from employees E1 WHERE E1.DEPARTMENT_ID = E2.DEPARTMENT_ID) AS 부서별총합
+FROM EMPLOYEES E2
+GROUP BY DEPARTMENT_ID, JOB_ID;
+
+***NVL (판별해야 하는 값, 판별값이 NULL 경우 화면 출력 데이터)
+예) SELECT DEPARTMENT_ID, NVL(DEPARTMENT_ID,0)AS 부서명 FROM EMPLOYEES;
+
+36. 각 직업 별 부서별(20,30,50,100 부서만) 연봉의 총 합을 조회한다. (NULL 값인 경우 0으로 표시한다.)
+
+select job_id, nvl(sum(decode(department_id, 20, salary)),0)as "20번 부서"
+,nvl(sum(decode(department_id, 30, salary)),0)as "30번 부서"
+,nvl(sum(decode(department_id, 50, salary)),0)as "50번 부서"
+,nvl(sum(decode(department_id, 100, salary)),0)as "100번 부서"
+from employees
+group by job_id;
+
+37. LAST_NAME 이 ZLotkey 와 동일한 부서에 근무하는 모든 사원들의 사번 및 고용날짜를 조회한다.
+SELECT EMPLOYEE_ID, HIRE_DATE
+FROM EMPLOYEES
+WHERE DEPARTMENT_ID IN (SELECT DEPARTMENT_ID FROM EMPLOYEES WHERE LAST_NAME = 'Zlotkey')
+AND LAST_NAME != 'Zlotkey';
+
+38. LAST_NAME 에 u 가 포함되는 사원들과 동일 부서에 근무하는 사원들의 사번 및 LAST_NAME 을 조회한다.
+SELECT EMPLOYEE_ID, LAST_NAME FROM EMPLOYEES
+WHERE DEPARTMENT_ID IN (SELECT DEPARTMENT_ID FROM EMPLOYEES WHERE LAST_NAME LIKE '%u%');
+
+39. 커미션을 버는 사원들의 부서와 연봉이 동일한 사원들의 LAST_NAME , 부서 번호 및 연봉을 조회한다.
+SELECT LAST_NAME , employee_Id,  SALARY from employees
+where (department_id , salary) in 
+(select department_id , salary from employees where commission_PCT is not null);
+
+
+*** 조인문 연습 ***
+J-1) 급여가 3000이상인 사원번호, LAST_NAME, SALARY, 부서명, 도시명을 조회하시오.
+select employee_id , last_name , salary , department_name ,city
+from DEPARTMENTS D , EMPLOYEES E , LOCATIONS L
+where D.department_id = E.department_id and D.Location_id = D.location_id and salary >= 3000;
+
+J-2) 급여가 2500 이하이고 사원번호가 200이하인 사원의 LAST_NAME, 부서명을 조회하시오.
+select last_name , department_name
+from DEPARTMENTS D , EMPLOYEES E
+where D.department_id = E.department_id and salary <= 2500 and employee_id <= 200;
+
+J-3) 급여범위가 JOBS 테이블의 최소급여(MIN_SALARY)와 최대급여(MAX_SALARY) 사이에 있는 사원의 LAST_NAME, JOB_ID를 조회하시오.
+select LAST_NAME , E.JOB_ID 
+from EMPLOYEES E , JOBS J
+where E.JOB_ID = J.JOB_ID and salary  between MIN_SALARY and MAX_SALARY; --------등가조인----------
+
+select LAST_NAME , E.JOB_ID
+from EMPLOYEES E , JOBS J
+where salary  between MIN_SALARY and MAX_SALARY;                         ----------비등가 조인------------
+
+
+J-4)자신의 매니저보다 먼저 고용된 사원들의 LAST_NAME 및 고용일을 조회한다.
+select EMP.last_name , EMP.hire_date 
+from employees EMP , employees MGR
+WHERE EMP.manager_id = MGR.employee_id
+AND EMP.HIRE_DATE < MGR.HIRE_DATE;
+
+
+
+J-5) 사원정보(EMPLOYEE_ID,LAST_NAME, MANAGER_ID)와 사원의 직속 상관정보(EMPLOYEE_ID,LAST_NAME) 조회하시오.  ---셀프 + 외부조인
+select EMP.EMPLOYEE_ID,EMP.LAST_NAME , EMP.MANAGER_ID , MGR.EMPLOYEE_ID , MGR.LAST_NAME
+from employees EMP , employees MGR
+where EMP.manager_Id = MGR.employee_id(+)
+order by EMP.employee_Id;
